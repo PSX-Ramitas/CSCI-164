@@ -6,12 +6,13 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from PIL import Image
+import matplotlib.pyplot as plt 
 
 # Define constants
 IMAGE_SIZE = 64
 BATCH_SIZE = 32
 NUM_CLASSES = 16  # Assuming you have 15 different cat breeds
-NUM_EPOCHS = 20
+NUM_EPOCHS = 2
 
 # Define the relative path to the dataset directory from the location of your Python script
 data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1'
@@ -144,6 +145,7 @@ for epoch in range(NUM_EPOCHS):
     # Validation phase after each epoch
     correct = 0
     total = 0
+    misclassified_images = []
     with torch.no_grad():
         for data in val_loader:
             images, labels = data
@@ -151,10 +153,29 @@ for epoch in range(NUM_EPOCHS):
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+    
+    # Store misclassified images for visualization
+            for i in range(len(predicted)):
+                if predicted[i] != labels[i]:
+                    misclassified_images.append((images[i], predicted[i], labels[i]))
 
     # Print training loss and validation accuracy for the epoch
     print('Epoch %d: Training Loss: %.3f, Validation Accuracy: %.2f%%' %
           (epoch + 1, running_loss / len(train_loader), 100 * correct / total))
+    
+     #Visualize misclassified images
+    """num_images_to_visualize = min(len(misclassified_images), 5)  # Visualize at most 5 misclassified images per epoch
+    for i in range(num_images_to_visualize):
+        image, predicted_label_idx, true_label_idx = misclassified_images[i]
+        predicted_label = list(label_to_index.keys())[predicted_label_idx]
+        true_label = list(label_to_index.keys())[true_label_idx]
+        
+        image = image.permute(1, 2, 0)  # Reshape image tensor to (H, W, C) for visualization
+        image = (image * 0.5) + 0.5  # Unnormalize the image
+        plt.imshow(image)
+        plt.title(f'Predicted: {predicted_label}, True: {true_label}')
+        plt.show()
+"""
 
 print('Finished Training')
 
