@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from PIL import Image
+import matplotlib.pyplot as plt
 
 # Define constants
 IMAGE_SIZE = 64
@@ -19,13 +20,6 @@ data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1'
 # Check if the directory exists
 if not os.path.exists(data_dir):
     raise FileNotFoundError(f"The directory '{data_dir}' does not exist.")
-
-# Define the path to the training directory (assuming it's directly under the dataset directory)
-train_data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1\\train'
-
-# Check if the directory exists
-if not os.path.exists(train_data_dir):
-    raise FileNotFoundError(f"The directory '{train_data_dir}' does not exist.")
 
 # Define custom dataset
 class CatDataset(Dataset):
@@ -46,49 +40,50 @@ class CatDataset(Dataset):
 
         return image, label
 
-# Data preprocessing and augmentation
-transform = transforms.Compose([
+# Define data augmentation transformations
+train_transform = transforms.Compose([
+    transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+    transforms.RandomRotation(20),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomVerticalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Assuming RGB images
+])
+
+# Data preprocessing transformation
+preprocess_transform = transforms.Compose([
     transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Assuming RGB images
 ])
 
 # Initialize lists to store file paths and labels
-train_filenames = []
-train_labels = []
+all_filenames = []
+all_labels = []
 
 # Loop through each subdirectory (each breed)
-for label in os.listdir(train_data_dir):
-    label_dir = os.path.join(train_data_dir, label)
+for label in os.listdir(data_dir):
+    label_dir = os.path.join(data_dir, label)
     # Loop through each image file in the subdirectory
     for filename in os.listdir(label_dir):
-        train_filenames.append(os.path.join(label_dir, filename))
-        train_labels.append(label)  # Append the label name (categorical) without conversion
+        all_filenames.append(os.path.join(label_dir, filename))
+        all_labels.append(label)  # Append the label name (categorical) without conversion
+
+# Convert labels to numerical indices
+label_to_index = {label: idx for idx, label in enumerate(set(all_labels))}
+
+# Convert all labels to numerical indices using the dictionary
+all_labels_numeric = [label_to_index[label] for label in all_labels]
 
 # Split data into train and validation sets
 train_filenames, val_filenames, train_labels, val_labels = train_test_split(
-    train_filenames, train_labels, test_size=0.2, random_state=42)
-
-# Initialize a dictionary to map labels to indices
-label_to_index = {label: idx for idx, label in enumerate(set(train_labels)) if label != 'train'}
-
-# Exclude 'train' label from the training labels
-train_labels_filtered = [label for label in train_labels if label != 'train']
-
-# Convert filtered training labels to numerical indices using the dictionary
-train_labels_numeric = [label_to_index[label] for label in train_labels_filtered]
-
-# Exclude 'train' label from the validation labels
-val_labels_filtered = [label for label in val_labels if label != 'train']
-
-# Convert filtered validation labels to numerical indices using the dictionary
-val_labels_numeric = [label_to_index[label] for label in val_labels_filtered]
+    all_filenames, all_labels_numeric, test_size=0.2, random_state=42)
 
 # Define datasets and data loaders
-train_dataset = CatDataset(train_filenames, train_labels_numeric, transform=transform)
+train_dataset = CatDataset(train_filenames, train_labels, transform=train_transform)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
-val_dataset = CatDataset(val_filenames, val_labels_numeric, transform=transform)
+val_dataset = CatDataset(val_filenames, val_labels, transform=preprocess_transform)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 print("Train Dataset size:", len(train_dataset))
 print("Validation Dataset size:", len(val_dataset))
@@ -123,7 +118,44 @@ model = CNN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+# Define function to calculate accuracy
+def calculate_accuracy(loader):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in loader:
+            images, labels = data
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    return correct / total
+
+# Define function to calculate false positives and false negatives
+def calculate_false_predictions(loader):
+    model.eval()
+    false_positives = 0
+    false_negatives = 0
+    with torch.no_grad():
+        for data in loader:
+            images, labels = data
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            false_positives += ((predicted == 1) & (labels == 0)).sum().item()  # Count false positives
+            false_negatives += ((predicted == 0) & (labels == 1)).sum().item()  # Count false negatives
+    return false_positives, false_negatives
+
 # Train the model
+train_losses = []
+val_losses = []
+train_accuracies = []
+val_accuracies = []
+train_false_positives = []
+train_false_negatives = []
+val_false_positives = []
+val_false_negatives = []
+
 for epoch in range(NUM_EPOCHS):
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
@@ -141,22 +173,87 @@ for epoch in range(NUM_EPOCHS):
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
     
-    # Validation phase after each epoch
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in val_loader:
-            images, labels = data
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+    # Calculate accuracy and false predictions on training and validation sets
+    train_accuracy = calculate_accuracy(train_loader)
+    val_accuracy = calculate_accuracy(val_loader)
+    train_losses.append(running_loss / len(train_loader))
+    val_losses.append(loss.item())
+    train_accuracies.append(train_accuracy)
+    val_accuracies.append(val_accuracy)
+    
+    train_false_positives_epoch, train_false_negatives_epoch = calculate_false_predictions(train_loader)
+    val_false_positives_epoch, val_false_negatives_epoch = calculate_false_predictions(val_loader)
+    train_false_positives.append(train_false_positives_epoch)
+    train_false_negatives.append(train_false_negatives_epoch)
+    val_false_positives.append(val_false_positives_epoch)
+    val_false_negatives.append(val_false_negatives_epoch)
 
     # Print training loss and validation accuracy for the epoch
-    print('Epoch %d: Training Loss: %.3f, Validation Accuracy: %.2f%%' %
-          (epoch + 1, running_loss / len(train_loader), 100 * correct / total))
+    print('Epoch %d: Training Loss: %.3f, Training Accuracy: %.2f%%, Validation Accuracy: %.2f%%' %
+          (epoch + 1, train_losses[-1], train_accuracies[-1] * 100, val_accuracies[-1] * 100))
+    print('False Positives (Train): %d, False Negatives (Train): %d' % (train_false_positives_epoch, train_false_negatives_epoch))
+    print('False Positives (Validation): %d, False Negatives (Validation): %d' % (val_false_positives_epoch, val_false_negatives_epoch))
 
-print('Finished Training')
+# Plot training and validation loss
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_EPOCHS + 1), train_losses, label='Training Loss')
+plt.plot(range(1, NUM_EPOCHS + 1), val_losses, label='Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.show()
+
+# Plot training and validation accuracy
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_EPOCHS + 1), train_accuracies, label='Training Accuracy')
+plt.plot(range(1, NUM_EPOCHS + 1), val_accuracies, label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.legend()
+plt.show()
+
+# Plot false positives and false negatives
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_EPOCHS + 1), train_false_positives, label='False Positives (Train)')
+plt.plot(range(1, NUM_EPOCHS + 1), train_false_negatives, label='False Negatives (Train)')
+plt.plot(range(1, NUM_EPOCHS + 1), val_false_positives, label='False Positives (Validation)')
+plt.plot(range(1, NUM_EPOCHS + 1), val_false_negatives, label='False Negatives (Validation)')
+plt.xlabel('Epoch')
+plt.ylabel('Count')
+plt.title('False Positives and False Negatives')
+plt.legend()
+plt.show()
 
 # Save the trained model
 torch.save(model.state_dict(), 'catModels.pth')
+
+# Load the trained model
+model = CNN()
+model.load_state_dict(torch.load('catModels.pth'))
+model.eval()
+
+# Define function to predict breed of a test image
+def predict_breed(image_path):
+    # Load and preprocess the test image
+    img = Image.open(image_path).convert('RGB')
+    img = preprocess_transform(img).unsqueeze(0)  # Add batch dimension
+    
+    # Forward pass through the model
+    with torch.no_grad():
+        output = model(img)
+        _, predicted = torch.max(output, 1)
+    
+    # Map predicted index to breed label
+    index_to_label = {v: k for k, v in label_to_index.items()}
+    predicted_breed = index_to_label[predicted.item()]
+    
+    return predicted_breed
+
+# Test image path
+test_image_path = 'test.jpg'
+
+# Predict breed of the test image
+predicted_breed = predict_breed(test_image_path)
+print(f"Predicted breed: {predicted_breed}")
