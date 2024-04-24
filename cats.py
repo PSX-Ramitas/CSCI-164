@@ -10,18 +10,18 @@ from PIL import Image
 # Define constants
 IMAGE_SIZE = 64
 BATCH_SIZE = 32
-NUM_CLASSES = 14  # Assuming you have 15 different cat breeds
+NUM_CLASSES = 16  # Assuming you have 15 different cat breeds
 NUM_EPOCHS = 20
 
 # Define the relative path to the dataset directory from the location of your Python script
-data_dir = 'CatBreeds/Gano-Cat-Breeds-V1_1'
+data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1'
 
 # Check if the directory exists
 if not os.path.exists(data_dir):
     raise FileNotFoundError(f"The directory '{data_dir}' does not exist.")
 
 # Define the path to the training directory (assuming it's directly under the dataset directory)
-train_data_dir = data_dir
+train_data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1\\train'
 
 # Check if the directory exists
 if not os.path.exists(train_data_dir):
@@ -40,10 +40,10 @@ class CatDataset(Dataset):
     def __getitem__(self, idx):
         image = Image.open(self.filenames[idx]).convert('RGB')
         label = self.labels[idx]
-        
+
         if self.transform:
             image = self.transform(image)
-        
+
         return image, label
 
 # Data preprocessing and augmentation
@@ -71,8 +71,6 @@ train_filenames, val_filenames, train_labels, val_labels = train_test_split(
 
 # Initialize a dictionary to map labels to indices
 label_to_index = {label: idx for idx, label in enumerate(set(train_labels)) if label != 'train'}
-print("Label to index mapping:", label_to_index)
-
 
 # Exclude 'train' label from the training labels
 train_labels_filtered = [label for label in train_labels if label != 'train']
@@ -92,6 +90,8 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 val_dataset = CatDataset(val_filenames, val_labels_numeric, transform=transform)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+print("Train Dataset size:", len(train_dataset))
+print("Validation Dataset size:", len(val_dataset))
 
 # Define CNN model
 class CNN(nn.Module):
@@ -101,13 +101,17 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
         self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
+        self.dropout = nn.Dropout(p=0.5)
         self.fc1 = nn.Linear(128 * 8 * 8, 128)
         self.fc2 = nn.Linear(128, NUM_CLASSES)
 
     def forward(self, x):
         x = self.pool(nn.functional.relu(self.conv1(x)))
+        x = self.dropout(x)
         x = self.pool(nn.functional.relu(self.conv2(x)))
+        x = self.dropout(x)
         x = self.pool(nn.functional.relu(self.conv3(x)))
+        x = self.dropout(x)
         x = x.view(-1, 128 * 8 * 8)
         x = nn.functional.relu(self.fc1(x))
         x = self.fc2(x)
@@ -136,19 +140,23 @@ for epoch in range(NUM_EPOCHS):
             print('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
+    
+    # Validation phase after each epoch
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in val_loader:
+            images, labels = data
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    # Print training loss and validation accuracy for the epoch
+    print('Epoch %d: Training Loss: %.3f, Validation Accuracy: %.2f%%' %
+          (epoch + 1, running_loss / len(train_loader), 100 * correct / total))
 
 print('Finished Training')
 
-# Evaluate the model
-correct = 0
-total = 0
-with torch.no_grad():
-    for data in val_loader:
-        images, labels = data
-        outputs = model(images)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-
-print('Accuracy of the network on the validation images: %d %%' % (
-    100 * correct / total))
+# Save the trained model
+torch.save(model.state_dict(), 'catModels.pth')
