@@ -194,38 +194,6 @@ for epoch in range(NUM_EPOCHS):
     print('False Positives (Train): %d, False Negatives (Train): %d' % (train_false_positives_epoch, train_false_negatives_epoch))
     print('False Positives (Validation): %d, False Negatives (Validation): %d' % (val_false_positives_epoch, val_false_negatives_epoch))
 
-# Plot training and validation loss
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, NUM_EPOCHS + 1), train_losses, label='Training Loss')
-plt.plot(range(1, NUM_EPOCHS + 1), val_losses, label='Validation Loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.title('Training and Validation Loss')
-plt.legend()
-plt.show()
-
-# Plot training and validation accuracy
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, NUM_EPOCHS + 1), train_accuracies, label='Training Accuracy')
-plt.plot(range(1, NUM_EPOCHS + 1), val_accuracies, label='Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy')
-plt.legend()
-plt.show()
-
-# Plot false positives and false negatives
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, NUM_EPOCHS + 1), train_false_positives, label='False Positives (Train)')
-plt.plot(range(1, NUM_EPOCHS + 1), train_false_negatives, label='False Negatives (Train)')
-plt.plot(range(1, NUM_EPOCHS + 1), val_false_positives, label='False Positives (Validation)')
-plt.plot(range(1, NUM_EPOCHS + 1), val_false_negatives, label='False Negatives (Validation)')
-plt.xlabel('Epoch')
-plt.ylabel('Count')
-plt.title('False Positives and False Negatives')
-plt.legend()
-plt.show()
-
 # Save the trained model
 torch.save(model.state_dict(), 'catModels.pth')
 
@@ -257,3 +225,35 @@ test_image_path = 'test.jpg'
 # Predict breed of the test image
 predicted_breed = predict_breed(test_image_path)
 print(f"Predicted breed: {predicted_breed}")
+
+# Plot training and validation loss
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_EPOCHS + 1), train_losses, label='Training Loss')
+plt.plot(range(1, NUM_EPOCHS + 1), val_losses, label='Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.show()
+
+# Plot training and validation accuracy
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_EPOCHS + 1), train_accuracies, label='Training Accuracy')
+plt.plot(range(1, NUM_EPOCHS + 1), val_accuracies, label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.legend()
+plt.show()
+
+# Plot false positives and false negatives
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_EPOCHS + 1), train_false_positives, label='False Positives (Train)')
+plt.plot(range(1, NUM_EPOCHS + 1), train_false_negatives, label='False Negatives (Train)')
+plt.plot(range(1, NUM_EPOCHS + 1), val_false_positives, label='False Positives (Validation)')
+plt.plot(range(1, NUM_EPOCHS + 1), val_false_negatives, label='False Negatives (Validation)')
+plt.xlabel('Epoch')
+plt.ylabel('Count')
+plt.title('False Positives and False Negatives')
+plt.legend()
+plt.show()
