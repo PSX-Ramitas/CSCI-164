@@ -7,6 +7,7 @@ from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from PIL import Image
 import matplotlib.pyplot as plt
+import time
 
 # Define constants
 IMAGE_SIZE = 64
@@ -146,6 +147,9 @@ def calculate_false_predictions(loader):
             false_negatives += ((predicted == 0) & (labels == 1)).sum().item()  # Count false negatives
     return false_positives, false_negatives
 
+# Record start time
+start_time = time.time()
+
 # Train the model
 train_losses = []
 val_losses = []
@@ -225,6 +229,17 @@ test_image_path = 'test.jpg'
 # Predict breed of the test image
 predicted_breed = predict_breed(test_image_path)
 print(f"Predicted breed: {predicted_breed}")
+
+# Record end time
+end_time = time.time()
+
+# Calculate runtime
+runtime = end_time - start_time
+# Calculate runtime in minutes and seconds
+minutes = int(runtime // 60)
+seconds = int(runtime % 60)
+
+print(f"Total runtime: {minutes} minutes {seconds} seconds")
 
 # Plot training and validation loss
 plt.figure(figsize=(10, 5))
