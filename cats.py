@@ -90,6 +90,29 @@ print("Train Dataset size:", len(train_dataset))
 print("Validation Dataset size:", len(val_dataset))
 
 # Define CNN model
+#class CNN(nn.Module):
+#    def __init__(self):
+#        super(CNN, self).__init__()
+#        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+#        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+#        self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
+#        self.pool = nn.MaxPool2d(2, 2)
+#        self.dropout = nn.Dropout(p=0.5)
+#        self.fc1 = nn.Linear(128 * 8 * 8, 128)
+#        self.fc2 = nn.Linear(128, NUM_CLASSES)
+#    def forward(self, x):
+#        x = self.pool(nn.functional.relu(self.conv1(x)))
+#        x = self.dropout(x)
+#        x = self.pool(nn.functional.relu(self.conv2(x)))
+#        x = self.dropout(x)
+#        x = self.pool(nn.functional.relu(self.conv3(x)))
+#        x = self.dropout(x)
+#        x = x.view(-1, 128 * 8 * 8)
+#        x = nn.functional.relu(self.fc1(x))
+#        x = self.fc2(x)
+#        return x
+
+# Define CNN model
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
