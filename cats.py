@@ -96,10 +96,14 @@ class CNN(nn.Module):
         self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
         self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv4 = nn.Conv2d(128, 256, 3, padding=1)  # Additional convolutional layer
+        self.conv5 = nn.Conv2d(256, 512, 3, padding=1)  # Additional convolutional layer
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout = nn.Dropout(p=0.5)
-        self.fc1 = nn.Linear(128 * 8 * 8, 128)
+        self.fc1 = nn.Linear(512 * 2 * 2, 128)  # Adjusted input size based on the output of the last conv layer
         self.fc2 = nn.Linear(128, NUM_CLASSES)
+        self.fc3 = nn.Linear(NUM_CLASSES, 64)  # Additional fully connected layer
+        self.fc4 = nn.Linear(64, NUM_CLASSES)   # Additional fully connected layer
 
     def forward(self, x):
         x = self.pool(nn.functional.relu(self.conv1(x)))
@@ -108,10 +112,23 @@ class CNN(nn.Module):
         x = self.dropout(x)
         x = self.pool(nn.functional.relu(self.conv3(x)))
         x = self.dropout(x)
-        x = x.view(-1, 128 * 8 * 8)
+        x = self.pool(nn.functional.relu(self.conv4(x)))  # Added convolutional layer
+        x = self.dropout(x)
+        x = self.pool(nn.functional.relu(self.conv5(x)))  # Added convolutional layer
+        x = self.dropout(x)
+        # Calculate the size of the tensor after the convolutional layers
+        batch_size = x.size(0)
+        # Reshape the tensor to maintain the batch size
+        x = x.view(batch_size, -1)
         x = nn.functional.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.dropout(x)
+        x = nn.functional.relu(self.fc2(x))
+        x = self.dropout(x)
+        x = nn.functional.relu(self.fc3(x))  # Added fully connected layer
+        x = self.dropout(x)
+        x = self.fc4(x)  # Output layer
         return x
+
 
 model = CNN()
 
