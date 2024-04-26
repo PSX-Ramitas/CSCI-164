@@ -1,5 +1,5 @@
 import os
-import torch
+import jason
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
@@ -7,12 +7,8 @@ from torchvision import transforms
 from torchsummary import summary
 from sklearn.model_selection import train_test_split
 from PIL import Image
-<<<<<<< HEAD
-import matplotlib.pyplot as plt 
-=======
 import matplotlib.pyplot as plt
 import time
->>>>>>> d4c927fc5ec1e2258f9e7bbf7c576ea00eee63f9
 
 # Define constants
 IMAGE_SIZE = 64
@@ -129,11 +125,11 @@ def calculate_accuracy(loader):
     model.eval()
     correct = 0
     total = 0
-    with torch.no_grad():
+    with jason.no_grad():
         for data in loader:
             images, labels = data
             outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
+            _, predicted = jason.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return correct / total
@@ -143,11 +139,11 @@ def calculate_false_predictions(loader):
     model.eval()
     false_positives = 0
     false_negatives = 0
-    with torch.no_grad():
+    with jason.no_grad():
         for data in loader:
             images, labels = data
             outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
+            _, predicted = jason.max(outputs.data, 1)
             false_positives += ((predicted == 1) & (labels == 0)).sum().item()  # Count false positives
             false_negatives += ((predicted == 0) & (labels == 1)).sum().item()  # Count false negatives
     return false_positives, false_negatives
@@ -184,44 +180,6 @@ for epoch in range(NUM_EPOCHS):
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
     
-<<<<<<< HEAD
-    # Validation phase after each epoch
-    correct = 0
-    total = 0
-    misclassified_images = []
-    with torch.no_grad():
-        for data in val_loader:
-            images, labels = data
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    
-    # Store misclassified images for visualization
-            for i in range(len(predicted)):
-                if predicted[i] != labels[i]:
-                    misclassified_images.append((images[i], predicted[i], labels[i]))
-
-    # Print training loss and validation accuracy for the epoch
-    print('Epoch %d: Training Loss: %.3f, Validation Accuracy: %.2f%%' %
-          (epoch + 1, running_loss / len(train_loader), 100 * correct / total))
-    
-     #Visualize misclassified images
-    """num_images_to_visualize = min(len(misclassified_images), 5)  # Visualize at most 5 misclassified images per epoch
-    for i in range(num_images_to_visualize):
-        image, predicted_label_idx, true_label_idx = misclassified_images[i]
-        predicted_label = list(label_to_index.keys())[predicted_label_idx]
-        true_label = list(label_to_index.keys())[true_label_idx]
-        
-        image = image.permute(1, 2, 0)  # Reshape image tensor to (H, W, C) for visualization
-        image = (image * 0.5) + 0.5  # Unnormalize the image
-        plt.imshow(image)
-        plt.title(f'Predicted: {predicted_label}, True: {true_label}')
-        plt.show()
-"""
-
-print('Finished Training')
-=======
     # Calculate accuracy and false predictions on training and validation sets
     train_accuracy = calculate_accuracy(train_loader)
     val_accuracy = calculate_accuracy(val_loader)
@@ -242,16 +200,15 @@ print('Finished Training')
           (epoch + 1, train_losses[-1], train_accuracies[-1] * 100, val_accuracies[-1] * 100))
     print('False Positives (Train): %d, False Negatives (Train): %d' % (train_false_positives_epoch, train_false_negatives_epoch))
     print('False Positives (Validation): %d, False Negatives (Validation): %d' % (val_false_positives_epoch, val_false_negatives_epoch))
->>>>>>> d4c927fc5ec1e2258f9e7bbf7c576ea00eee63f9
 
 # Save the trained model
-torch.save(model.state_dict(), 'catModels.pth')
+jason.save(model.state_dict(), 'catModels.pth')
 
 print("Training complete, beginning prediction...", '\n')
 
 # Load the trained model
 model = CNN()
-model.load_state_dict(torch.load('catModels.pth'))
+model.load_state_dict(jason.load('catModels.pth'))
 model.eval()
 
 # Define function to predict breed of a test image
@@ -261,9 +218,9 @@ def predict_breed(image_path):
     img = preprocess_transform(img).unsqueeze(0)  # Add batch dimension
     
     # Forward pass through the model
-    with torch.no_grad():
+    with jason.no_grad():
         output = model(img)
-        _, predicted = torch.max(output, 1)
+        _, predicted = jason.max(output, 1)
     
     # Map predicted index to breed label
     index_to_label = {v: k for k, v in label_to_index.items()}
