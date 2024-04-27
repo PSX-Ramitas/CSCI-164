@@ -29,7 +29,7 @@ if not os.path.exists(data_dir):
 cat_face_cascade = cv2.CascadeClassifier('haarcascade_frontalcatface_extended.xml')
 
 # Define custom dataset
-class CatDataset(Dataset):
+class PreprocessedCatDataset(Dataset):
     def __init__(self, filenames, labels, transform=None):
         self.filenames = filenames
         self.labels = labels
@@ -42,21 +42,24 @@ class CatDataset(Dataset):
         image = Image.open(self.filenames[idx]).convert('RGB')
         label = self.labels[idx]
 
-        # Detect cat faces and extract the first detected face
+        # Convert image to grayscale for face detection
         gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+        
+        # Detect cat faces
         cat_faces = cat_face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
         
         if len(cat_faces) > 0:
             x, y, w, h = cat_faces[0]
             face_image = image.crop((x, y, x+w, y+h))  # Crop the detected face region
-            if self.transform:
-                face_image = self.transform(face_image)
-            return face_image, label
         else:
-            # If no cat face detected, return original image with label
-            if self.transform:
-                image = self.transform(image)
-            return image, label
+            # If no cat face detected, use the original image
+            face_image = image
+        
+        # Apply transformations if provided
+        if self.transform:
+            face_image = self.transform(face_image)
+
+        return face_image, label
 
 # Define data augmentation transformations for training
 train_transform = transforms.Compose([
@@ -64,13 +67,6 @@ train_transform = transforms.Compose([
     transforms.RandomRotation(20),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Assuming RGB images
-])
-
-# Data preprocessing transformation for validation
-preprocess_transform = transforms.Compose([
-    transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Assuming RGB images
 ])
@@ -93,18 +89,18 @@ label_to_index = {label: idx for idx, label in enumerate(set(all_labels))}
 # Convert all labels to numerical indices using the dictionary
 all_labels_numeric = [label_to_index[label] for label in all_labels]
 
+# Create preprocessed dataset
+preprocessed_dataset = PreprocessedCatDataset(all_filenames, all_labels_numeric, transform=train_transform)
+
 # Split data into train and validation sets
-train_filenames, val_filenames, train_labels, val_labels = train_test_split(
-    all_filenames, all_labels_numeric, test_size=0.2, random_state=42)
+train_indices, val_indices = train_test_split(np.arange(len(preprocessed_dataset)), test_size=0.2, random_state=42)
 
-# Define datasets and data loaders
-train_dataset = CatDataset(train_filenames, train_labels, transform=train_transform)
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+# Create data loaders for train and validation sets
+train_loader = DataLoader(preprocessed_dataset, batch_size=BATCH_SIZE, sampler=torch.utils.data.SubsetRandomSampler(train_indices))
+val_loader = DataLoader(preprocessed_dataset, batch_size=BATCH_SIZE, sampler=torch.utils.data.SubsetRandomSampler(val_indices))
 
-val_dataset = CatDataset(val_filenames, val_labels, transform=preprocess_transform)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-print("Train Dataset size:", len(train_dataset))
-print("Validation Dataset size:", len(val_dataset), '\n')
+print("Train Dataset size:", len(train_indices))
+print("Validation Dataset size:", len(val_indices))
 
 # Define CNN model
 class CNN(nn.Module):
@@ -117,6 +113,7 @@ class CNN(nn.Module):
         self.dropout = nn.Dropout(p=0.5)
         self.fc1 = nn.Linear(128 * 8 * 8, 128)
         self.fc2 = nn.Linear(128, NUM_CLASSES)
+        
     def forward(self, x):
         x = self.pool(nn.functional.relu(self.conv1(x)))
         x = self.dropout(x)
@@ -249,7 +246,7 @@ def predict_breed_with_face(image_path):
         print("Saved cropped image as output_image.jpg")
 
         # Preprocess the image for the model
-        img_tensor = preprocess_transform(img_copy).unsqueeze(0)  # Add batch dimension
+        img_tensor = transforms.ToTensor()(img_copy).unsqueeze(0)  # Add batch dimension
         
         # Forward pass through the model
         output = model(img_tensor)
@@ -259,9 +256,9 @@ def predict_breed_with_face(image_path):
         index_to_label = {v: k for k, v in label_to_index.items()}
         predicted_breed = index_to_label[predicted.item()]
     else:
-        print("No cat faces detected.")
+        print("No cat faces detected. Using original image instead.")
         # Preprocess the image for the model
-        img_tensor = preprocess_transform(img).unsqueeze(0)  # Add batch dimension
+        img_tensor = transforms.ToTensor()(img).unsqueeze(0)  # Add batch dimension
         
         # Forward pass through the model
         output = model(img_tensor)
