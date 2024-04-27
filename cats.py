@@ -1,5 +1,5 @@
 import os
-import jason
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
@@ -14,7 +14,7 @@ import time
 IMAGE_SIZE = 64
 BATCH_SIZE = 32
 NUM_CLASSES = 16  # Assuming you have 15 different cat breeds
-NUM_EPOCHS = 2
+NUM_EPOCHS = 20
 
 # Define the relative path to the dataset directory from the location of your Python script
 data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1'
@@ -125,11 +125,11 @@ def calculate_accuracy(loader):
     model.eval()
     correct = 0
     total = 0
-    with jason.no_grad():
+    with torch.no_grad():
         for data in loader:
             images, labels = data
             outputs = model(images)
-            _, predicted = jason.max(outputs.data, 1)
+            _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return correct / total
@@ -139,11 +139,11 @@ def calculate_false_predictions(loader):
     model.eval()
     false_positives = 0
     false_negatives = 0
-    with jason.no_grad():
+    with torch.no_grad():
         for data in loader:
             images, labels = data
             outputs = model(images)
-            _, predicted = jason.max(outputs.data, 1)
+            _, predicted = torch.max(outputs.data, 1)
             false_positives += ((predicted == 1) & (labels == 0)).sum().item()  # Count false positives
             false_negatives += ((predicted == 0) & (labels == 1)).sum().item()  # Count false negatives
     return false_positives, false_negatives
@@ -202,13 +202,13 @@ for epoch in range(NUM_EPOCHS):
     print('False Positives (Validation): %d, False Negatives (Validation): %d' % (val_false_positives_epoch, val_false_negatives_epoch))
 
 # Save the trained model
-jason.save(model.state_dict(), 'catModels.pth')
+torch.save(model.state_dict(), 'catModels.pth')
 
 print("Training complete, beginning prediction...", '\n')
 
 # Load the trained model
 model = CNN()
-model.load_state_dict(jason.load('catModels.pth'))
+model.load_state_dict(torch.load('catModels.pth'))
 model.eval()
 
 # Define function to predict breed of a test image
@@ -218,9 +218,9 @@ def predict_breed(image_path):
     img = preprocess_transform(img).unsqueeze(0)  # Add batch dimension
     
     # Forward pass through the model
-    with jason.no_grad():
+    with torch.no_grad():
         output = model(img)
-        _, predicted = jason.max(output, 1)
+        _, predicted = torch.max(output, 1)
     
     # Map predicted index to breed label
     index_to_label = {v: k for k, v in label_to_index.items()}
