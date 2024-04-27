@@ -16,7 +16,7 @@ import time
 IMAGE_SIZE = 64
 BATCH_SIZE = 32
 NUM_CLASSES = 16  # Assuming you have 15 different cat breeds
-NUM_EPOCHS = 20
+NUM_EPOCHS = 1
 
 # Define the relative path to the dataset directory from the location of your Python script
 data_dir = 'CatBreeds\\Gano-Cat-Breeds-V1_1'
@@ -115,18 +115,28 @@ class CNN(nn.Module):
         self.fc2 = nn.Linear(128, NUM_CLASSES)
         
     def forward(self, x):
+        x = x.to(device)
+       # print("Input shape:", x.shape)
         x = self.pool(nn.functional.relu(self.conv1(x)))
+       # print("After conv1 and pool:", x.shape)
         x = self.dropout(x)
         x = self.pool(nn.functional.relu(self.conv2(x)))
+        #print("After conv2 and pool:", x.shape)
         x = self.dropout(x)
         x = self.pool(nn.functional.relu(self.conv3(x)))
+       # print("After conv3 and pool:", x.shape)
         x = self.dropout(x)
-        x = x.view(-1, 128 * 8 * 8)
+        x = x.view(x.size(0), -1)
+       # print("Flattened shape:", x.shape)
         x = nn.functional.relu(self.fc1(x))
+       # print("After fc1:", x.shape)
         x = self.fc2(x)
+        #print("After fc2:", x.shape)
         return x
 
-model = CNN()
+
+device = torch.device("cpu")
+model = CNN().to(device)
 summary(model, (3, 64, 64))
 
 # Define loss function and optimizer
@@ -246,19 +256,14 @@ def predict_breed_with_face(image_path):
         print("Saved cropped image as output_image.jpg")
 
         # Preprocess the image for the model
-        img_tensor = transforms.ToTensor()(img_copy).unsqueeze(0)  # Add batch dimension
-        
-        # Forward pass through the model
-        output = model(img_tensor)
-        _, predicted = torch.max(output, 1)
-    
+        #img_tensor = transforms.ToTensor()(img_copy).unsqueeze(0)  # Add batch dimension
+        img_tensor = train_transform(img_copy).unsqueeze(0)  # Add batch dimension
         # Map predicted index to breed label
-        index_to_label = {v: k for k, v in label_to_index.items()}
-        predicted_breed = index_to_label[predicted.item()]
     else:
         print("No cat faces detected. Using original image instead.")
         # Preprocess the image for the model
-        img_tensor = transforms.ToTensor()(img).unsqueeze(0)  # Add batch dimension
+        #img_tensor = transforms.ToTensor()(img).unsqueeze(0)  # Add batch dimension
+        img_tensor = train_transform(img).unsqueeze(0)  # Add batch dimension
         
         # Forward pass through the model
         output = model(img_tensor)
@@ -267,6 +272,7 @@ def predict_breed_with_face(image_path):
         # Map predicted index to breed label
         index_to_label = {v: k for k, v in label_to_index.items()}
         predicted_breed = index_to_label[predicted.item()]
+    
     return predicted_breed
 
 # Test image path
