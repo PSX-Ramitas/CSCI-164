@@ -16,6 +16,9 @@ Identifying the breed of an animal is crucial for providing personalized care, b
  - scikit-learn
  - TorchVision
  - NumPy
+ - matplotlib
+ - Pillow
+ - tqdm
 
 ## About Dataset
 The dataset utilized is taken from [this Kaggle link here](https://www.kaggle.com/datasets/shawngano/gano-cat-breed-image-collection).
@@ -37,7 +40,7 @@ It contains 15 different folders labelled by the respective breed of cats:
 - Sphynx
 - Tuxedo
 
-Within those folders, each breed has a total of 375 images, all of which are jpeg files.  Since our neural networks in `cats.py` and `cats-vj.py` are written from scratch and able to work only with images in jpeg format, then it was necessary to ensure that any and all images used to test the model after training are also in the same format.  In `cats.py`, the dataset is preprocessed with a series of transformations from the torchvision library.  In `cats-vj.py`, it also extracts facial features using the Viola-Jones algorithm for the face detection approach and crops the images based on the detected faces, such so that the model could be traiend purely off detected faces.  
+Within those folders, each breed has a total of 375 images, all of which are jpeg files.  Since our neural networks in `cats.ipynb` and `cats-vj.ipynb` are written from scratch and able to work only with images in jpeg format, then it was necessary to ensure that any and all images used to test the model after training are also in the same format.  In `cats.ipynb`, the dataset is preprocessed with a series of transformations from the torchvision library.  In `cats-vj.ipynb`, it also extracts facial features using the Viola-Jones algorithm for the face detection approach and crops the images based on the detected faces, such so that the model could be traiend purely off detected faces.  
 
 The haar cascades utilized to train the Viola-Jones algorithm with cat faces are taken from OpenCV's library, found [here](https://github.com/opencv/opencv/tree/4.x/data/haarcascades).
 
@@ -52,4 +55,4 @@ To replicate the experiment for future developments and exploring the potential 
 1. Clone this repository.
 2. Install the required dependencies listed above.
 3. Ensure you have a folder `CatBreeds` containing the dataset mentioned above, the haar cascades, as well as an input image labelled `test.jpg`, located in the same directory as both `cats.py` and `cats-vj.py`.
-4. Run `cats.py` to evaluate the model and its performance when acting on its own, and `cats-vj.py` to evaluate the model when haar-cascades and Viola-Jones are incorporated as well.
+4. Run `cats.ipynb` to evaluate the model and its performance when acting on its own, and `cats-vj.ipynb` to evaluate the model when haar-cascades and Viola-Jones are incorporated as well.
