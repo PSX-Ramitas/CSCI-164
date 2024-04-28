@@ -1,2 +1,5 @@
 CatBreeds/
 catbreeds-preprocessed-vj/
+split_data.py
+cats/
+best_resnet101_cat_breeds.pth

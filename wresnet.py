@@ -6,7 +6,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 # Load pre-trained resnet101 model and modify it for 15 cat breeds
-resnetModel = models.resnetModel(pretrained=True)
+resnetModel = models.resnet101(pretrained=True)
 num_features = resnetModel.fc.in_features
 resnetModel.fc = nn.Linear(num_features, 15)
 # Setup device
