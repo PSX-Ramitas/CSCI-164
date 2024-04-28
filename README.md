@@ -54,5 +54,5 @@ The haar cascades utilized to train the Viola-Jones algorithm with cat faces are
 To replicate the experiment for future developments and exploring the potential applications:
 1. Clone this repository.
 2. Install the required dependencies listed above.
-3. Ensure you have a folder `CatBreeds` containing the dataset mentioned above, the haar cascades, as well as an input image labelled `test.jpg`, located in the same directory as both `cats.py` and `cats-vj.py`.
+3. Ensure you have a folder `CatBreeds` containing the dataset mentioned above, the haar cascades, as well as an input image labelled `test.jpg`, located in the same directory as both models.
 4. Run `cats.ipynb` to evaluate the model and its performance when acting on its own, and `cats-vj.ipynb` to evaluate the model when haar-cascades and Viola-Jones are incorporated as well.
